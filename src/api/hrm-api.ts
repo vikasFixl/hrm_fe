@@ -222,14 +222,19 @@ export const recruitmentApi = {
   createCandidate: async (payload: any) => { const { data } = await http.post("/recruitment/candidates", payload); return data; },
   getCandidate: async (id: string) => { const { data } = await http.get(`/recruitment/candidates/${id}`); return data; },
   listCandidates: async () => { const { data } = await http.get("/recruitment/candidates/all"); return unwrapList<any>(data, ["candidates"]); },
+  searchCandidatesByEmail: async (email: string) => { const { data } = await http.get(`/recruitment/candidates/search-email?email=${encodeURIComponent(email)}`); return unwrapList<any>(data, ["data", "candidates"]); },
   updateCandidate: async (id: string, payload: any) => { const { data } = await http.patch(`/recruitment/candidates/${id}`, payload); return data; },
-  updateCandidateStatus: async (id: string, status: string) => { const { data } = await http.patch(`/recruitment/candidates/update-status/${id}`, { status }); return data; },
+  updateCandidateStatus: async (id: string, payload: string | Record<string, any>) => {
+    const body = typeof payload === "string" ? { status: payload } : payload;
+    const { data } = await http.patch(`/recruitment/candidates/update-status/${id}`, body);
+    return data;
+  },
   createInterview: async (payload: any) => { const { data } = await http.post("/recruitment/interviews", payload); return data; },
   scheduleInterview: async (payload: any) => { const { data } = await http.post("/recruitment/interviews", payload); return data; },
-  listInterviews: async () => { const { data } = await http.get("/recruitment/interviews"); return unwrapList<any>(data, ["interviews"]); },
+  listInterviews: async (params?: Record<string, any>) => { const { data } = await http.get("/recruitment/interviews", { params }); return unwrapList<any>(data, ["interviews"]); },
   updateInterviewStatus: async (id: string, status: string) => { const { data } = await http.patch(`/recruitment/interviews/${id}/status`, { status }); return data; },
   createOffer: async (payload: any) => { const { data } = await http.post("/recruitment/offers", payload); return data; },
-  listOffers: async () => { const { data } = await http.get("/recruitment/offers/all"); return unwrapList<any>(data, ["offers"]); },
+  listOffers: async (params?: Record<string, any>) => { const { data } = await http.get("/recruitment/offers/all", { params }); return unwrapList<any>(data, ["offers"]); },
   updateOfferStatus: async (id: string, status: string, acceptedDate?: string) => { const { data } = await http.patch(`/recruitment/offers/${id}`, { status, acceptedDate }); return data; },
   getAnalytics: async () => { const { data } = await http.get("/recruitment/analytics/all"); return data; },
   generateAnalytics: async (jobPostingId: string) => { const { data } = await http.post(`/recruitment/analytics/generate/${jobPostingId}`); return data; }

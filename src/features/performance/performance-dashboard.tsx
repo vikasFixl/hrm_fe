@@ -1,90 +1,115 @@
 // @ts-nocheck
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { performanceApi, employeeApi } from "../../api/hrm-api";
-import { Card } from "../../components/ui/card";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CalendarDays, ClipboardCheck, MessageSquare, Plus, Target, TrendingUp } from "lucide-react";
+import { performanceApi } from "../../api/hrm-api";
 import { Button } from "../../components/ui/button";
+import { Card } from "../../components/ui/card";
+import { EmptyState } from "../../components/ui/empty-state";
+import { SkeletonCard, SkeletonList, SkeletonTable } from "../../components/ui/skeleton";
+import { Tabs } from "../../components/ui/tabs";
 
+type PerformanceTab = "goals" | "appraisals" | "pips" | "feedback";
 
-import { Goal, PerformanceAppraisal, ImprovementPlan, Feedback } from "../../api/types";
-
-import { AsyncSelect } from "../../components/ui/async-select";
+const tabs: Array<{ value: PerformanceTab; label: string }> = [
+  { value: "goals", label: "Goals" },
+  { value: "appraisals", label: "Appraisals" },
+  { value: "pips", label: "Improvement Plans" },
+  { value: "feedback", label: "Feedback" },
+];
 
 export function PerformanceDashboard() {
-  const [activeTab, setActiveTab] = useState("goals");
+  const [activeTab, setActiveTab] = useState<PerformanceTab>("goals");
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Performance Management</h1>
+    <div className="performance-page page-fade">
+      <div className="page-title performance-hero">
+        <div>
+          <h1>Performance Management</h1>
+          <p>Track goals, appraisals, feedback and employee development.</p>
+        </div>
+        <CreateGoalModal />
       </div>
 
-      <div className="space-y-4">
-        <div className="flex space-x-2 border-b pb-2">
-          <button className={`px-4 py-2 font-medium ${activeTab === "goals" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500"}`} onClick={() => setActiveTab("goals")}>Goals</button>
-          <button className={`px-4 py-2 font-medium ${activeTab === "appraisals" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500"}`} onClick={() => setActiveTab("appraisals")}>Appraisals</button>
-          <button className={`px-4 py-2 font-medium ${activeTab === "pips" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500"}`} onClick={() => setActiveTab("pips")}>Improvement Plans</button>
-          <button className={`px-4 py-2 font-medium ${activeTab === "feedback" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500"}`} onClick={() => setActiveTab("feedback")}>Feedback</button>
-        </div>
+      <Tabs value={activeTab} tabs={tabs} onChange={setActiveTab} />
 
-        {activeTab === "goals" && (<div>
-          <GoalsTab />
-        </div>)}
-        {activeTab === "appraisals" && (<div>
-          <AppraisalsTab />
-        </div>)}
-        {activeTab === "pips" && (<div>
-          <ImprovementPlansTab />
-        </div>)}
-        {activeTab === "feedback" && (<div>
-          <FeedbackTab />
-        </div>)}
+      <div className="tab-panel">
+        {activeTab === "goals" && <GoalsTab />}
+        {activeTab === "appraisals" && <AppraisalsTab />}
+        {activeTab === "pips" && <ImprovementPlansTab />}
+        {activeTab === "feedback" && <FeedbackTab />}
       </div>
     </div>
   );
 }
 
-// --- GOALS TAB ---
 function GoalsTab() {
-  const queryClient = useQueryClient();
   const { data: goals = [], isLoading } = useQuery({
     queryKey: ["performance-goals"],
-    queryFn: () => performanceApi.getGoals().then(res => res || [])
+    queryFn: () => performanceApi.getGoals().then((res) => res || []),
   });
 
+  if (isLoading) {
+    return (
+      <div className="performance-grid">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <SkeletonCard key={index} lines={4} />
+        ))}
+      </div>
+    );
+  }
+
+  if (!goals.length) {
+    return (
+      <Card className="empty-card">
+        <EmptyState
+          icon={Target}
+          title="No Goals Yet"
+          description="Start tracking company objectives."
+          action={<CreateGoalModal label="Create First Goal" />}
+        />
+      </Card>
+    );
+  }
+
   return (
-    <Card>
-      <div className="flex flex-row items-center justify-between p-10">
-        <h3 className="text-lg font-semibold">Company Goals</h3>
-        <CreateGoalModal />
-      </div>
-      <div className="p-4">
-        {isLoading ? <p>Loading goals...</p> : (
-          <div className="space-y-4">
-            {goals.map((g: any) => (
-              <div key={g._id || g.id} className="p-4 border rounded-lg flex justify-between items-center bg-gray-50">
-                <div>
-                  <h3 className="font-semibold">{g.goal}</h3>
-                  <p className="text-sm text-gray-500">Employee: {g.employee?.name || g.employee?.email}</p>
-                  <p className="text-sm text-gray-500">Target Date: {new Date(g.targetDate).toLocaleDateString()}</p>
-                </div>
-                <div className="flex flex-col items-end">
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {g.status}
-                  </span>
-                  <span className="text-sm mt-1">{g.progress}% Complete</span>
-                </div>
+    <div className="performance-grid">
+      {goals.map((goal: any) => {
+        const progress = clampPercent(goal.progress);
+        return (
+          <article key={goal._id || goal.id} className="performance-card goal-card">
+            <div className="performance-card-head">
+              <div className="card-icon blue">
+                <Target size={18} />
               </div>
-            ))}
-            {goals.length === 0 && <p className="text-gray-500">No goals found.</p>}
-          </div>
-        )}
-      </div>
-    </Card>
+              <span className="badge badge-blue badge-dot">{goal.status || "In Progress"}</span>
+            </div>
+            <h3>{goal.goal || "Untitled Goal"}</h3>
+            <div className="progress-summary">
+              <span>Progress</span>
+              <strong>{progress}%</strong>
+            </div>
+            <div className="progress-track" aria-label={`Goal progress ${progress}%`}>
+              <span style={{ width: `${progress}%` }} />
+            </div>
+            <div className="card-meta-grid">
+              <span>
+                <CalendarDays size={14} />
+                Due: {formatDate(goal.targetDate)}
+              </span>
+              <span>
+                <TrendingUp size={14} />
+                Owner: {goal.employee?.name || goal.employee?.email || "Unassigned"}
+              </span>
+            </div>
+          </article>
+        );
+      })}
+    </div>
   );
 }
 
-function CreateGoalModal() {
+function CreateGoalModal({ label = "Create Goal" }: { label?: string }) {
   const [open, setOpen] = useState(false);
   const [employeeId, setEmployeeId] = useState("");
   const [goal, setGoal] = useState("");
@@ -95,154 +120,204 @@ function CreateGoalModal() {
     mutationFn: performanceApi.createGoal,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["performance-goals"] });
+      setEmployeeId("");
+      setGoal("");
+      setTargetDate("");
       setOpen(false);
-    }
+    },
   });
+
+  const saveGoal = () => {
+    mutation.mutate({
+      employee: employeeId,
+      goal,
+      targetDate,
+      status: "In Progress",
+      progress: 0,
+      keyPerformanceIndicators: [],
+    });
+  };
 
   return (
     <>
-      <div onClick={() => setOpen(true)} className="inline-block">
-        <Button>Create Goal</Button>
-      </div>
+      <Button icon={<Plus size={16} />} onClick={() => setOpen(true)}>
+        {label}
+      </Button>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-lg w-full relative"><button onClick={() => setOpen(false)} className="absolute top-2 right-2 border rounded px-2">X</button>
-        <div className="mb-4"><h2 className="text-xl font-bold">New Goal</h2></div>
-        <div className="space-y-4 pt-4">
-          <div>
-            <label className="text-sm font-medium">Employee</label>
-            <input className="flex h-10 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" placeholder="Search employee..." onChange={(e: any) => setEmployeeId(e.target.value)} />
+        <div className="modal-backdrop">
+          <div className="modal">
+            <div className="modal-header">
+              <div>
+                <h2>New Goal</h2>
+                <p className="muted">Assign a measurable objective to an employee.</p>
+              </div>
+              <Button type="button" variant="ghost" size="sm" onClick={() => setOpen(false)}>
+                Close
+              </Button>
+            </div>
+            <div className="form-grid">
+              <label className="field">
+                <span>Employee</span>
+                <input className="input" placeholder="Employee ID or email" value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} />
+              </label>
+              <label className="field">
+                <span>Goal Title</span>
+                <input className="input" value={goal} onChange={(event) => setGoal(event.target.value)} />
+              </label>
+              <label className="field">
+                <span>Target Date</span>
+                <input className="input" type="date" value={targetDate} onChange={(event) => setTargetDate(event.target.value)} />
+              </label>
+            </div>
+            <div className="form-actions">
+              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="button" loading={mutation.isPending} onClick={saveGoal} disabled={!employeeId || !goal || !targetDate}>
+                Save Goal
+              </Button>
+            </div>
           </div>
-          <div>
-            <label className="text-sm font-medium">Goal Title</label>
-            <input className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm" value={goal} onChange={(e: any) => setGoal(e.target.value)} />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Target Date</label>
-            <input className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm" type="date" value={targetDate} onChange={(e: any) => setTargetDate(e.target.value)} />
-          </div>
-          <Button onClick={() => mutation.mutate({ employee: employeeId, goal, targetDate, status: "In Progress", progress: 0, keyPerformanceIndicators: [] })} disabled={mutation.isPending}>
-            Save Goal
-          </Button>
-        </div>
-      </div>
         </div>
       )}
     </>
   );
 }
 
-// --- APPRAISALS TAB ---
 function AppraisalsTab() {
   const { data: appraisals = [], isLoading } = useQuery({
     queryKey: ["performance-appraisals"],
-    queryFn: () => performanceApi.getAppraisals().then(res => res || [])
+    queryFn: () => performanceApi.getAppraisals().then((res) => res || []),
   });
 
+  if (isLoading) {
+    return <SkeletonTable rows={5} cols={5} />;
+  }
+
+  if (!appraisals.length) {
+    return (
+      <Card className="empty-card">
+        <EmptyState icon={ClipboardCheck} title="No Appraisals Yet" description="Create review cycles to capture employee performance ratings." action={<Button variant="secondary">New Appraisal</Button>} />
+      </Card>
+    );
+  }
+
   return (
-    <Card>
-      <div className="flex flex-row items-center justify-between">
-        <h3 className="text-lg font-semibold">Performance Appraisals</h3>
-        <Button>New Appraisal</Button>
-      </div>
-      <div className="p-4">
-        {isLoading ? <p>Loading...</p> : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {appraisals.map((a: any) => (
-              <div key={a._id || a.id} className="p-4 border rounded-lg bg-white shadow-sm">
-                <div className="flex justify-between">
-                  <h3 className="font-semibold text-lg">{a.employee?.email}</h3>
-                  <span className="text-2xl font-bold text-blue-600">{a.rating}/5</span>
-                </div>
-                <p className="text-sm text-gray-500 mb-2">Period: {a.period}</p>
-                <div className="text-sm mt-2">
-                  <p className="font-medium">Manager Comments:</p>
-                  <p className="text-gray-600 italic">"{a.managerComments || 'No comments'}"</p>
-                </div>
-              </div>
-            ))}
+    <div className="performance-grid two">
+      {appraisals.map((appraisal: any) => (
+        <article key={appraisal._id || appraisal.id} className="performance-card">
+          <div className="performance-card-head">
+            <div className="card-icon purple">
+              <ClipboardCheck size={18} />
+            </div>
+            <strong className="rating-pill">{appraisal.rating || 0}/5</strong>
           </div>
-        )}
-      </div>
-    </Card>
+          <h3>{appraisal.employee?.name || appraisal.employee?.email || "Employee Review"}</h3>
+          <p className="muted">Period: {appraisal.period || "Not specified"}</p>
+          <div className="quote-block">{appraisal.managerComments || "No comments added."}</div>
+        </article>
+      ))}
+    </div>
   );
 }
 
-// --- IMPROVEMENT PLANS TAB ---
 function ImprovementPlansTab() {
   const { data: pips = [], isLoading } = useQuery({
     queryKey: ["performance-pips"],
-    queryFn: () => performanceApi.getImprovementPlans().then(res => res || [])
+    queryFn: () => performanceApi.getPIPs().then((res) => res || []),
   });
 
+  if (isLoading) {
+    return (
+      <div className="performance-grid two">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <SkeletonCard key={index} lines={5} />
+        ))}
+      </div>
+    );
+  }
+
+  if (!pips.length) {
+    return (
+      <Card className="empty-card">
+        <EmptyState icon={TrendingUp} title="No Improvement Plans" description="Structured coaching plans will appear here when created." action={<Button variant="danger">Create PIP</Button>} />
+      </Card>
+    );
+  }
+
   return (
-    <Card>
-      <div className="flex flex-row items-center justify-between">
-        <h3 className="text-lg font-semibold">Improvement Plans (PIP)</h3>
-        <Button variant="danger">Create PIP</Button>
-      </div>
-      <div className="p-4">
-        {isLoading ? <p>Loading...</p> : (
-          <div className="space-y-4">
-            {pips.map((p: any) => (
-              <div key={p._id || p.id} className="p-4 border-l-4 border-red-500 bg-white rounded-r-lg shadow-sm">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="font-semibold text-red-700">PIP: {p.employee?.email}</h3>
-                    <p className="text-sm text-gray-500">Timeline: {new Date(p.timeline).toLocaleDateString()}</p>
-                  </div>
-                  <span className="px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                    {p.status}
-                  </span>
-                </div>
-                <div className="mt-3">
-                  <p className="text-sm font-medium">Objectives:</p>
-                  <ul className="list-disc list-inside text-sm text-gray-600">
-                    {p.objectives?.map((obj: string, i: number) => <li key={i}>{obj}</li>)}
-                  </ul>
-                </div>
-              </div>
-            ))}
+    <div className="performance-grid two">
+      {pips.map((pip: any) => (
+        <article key={pip._id || pip.id} className="performance-card pip-card">
+          <div className="performance-card-head">
+            <div className="card-icon red">
+              <TrendingUp size={18} />
+            </div>
+            <span className="badge badge-red badge-dot">{pip.status || "Open"}</span>
           </div>
-        )}
-      </div>
-    </Card>
+          <h3>{pip.employee?.name || pip.employee?.email || "Improvement Plan"}</h3>
+          <p className="muted">Timeline: {formatDate(pip.timeline)}</p>
+          <div className="timeline-line" />
+          <ul className="compact-list">
+            {(pip.objectives || ["Objectives pending"]).map((objective: string, index: number) => (
+              <li key={index}>{objective}</li>
+            ))}
+          </ul>
+        </article>
+      ))}
+    </div>
   );
 }
 
-// --- FEEDBACK TAB ---
 function FeedbackTab() {
   const { data: feedback = [], isLoading } = useQuery({
     queryKey: ["performance-feedback"],
-    queryFn: () => performanceApi.getFeedbacks().then(res => res || [])
+    queryFn: () => performanceApi.getFeedback().then((res) => res || []),
   });
 
+  if (isLoading) {
+    return <SkeletonList rows={5} />;
+  }
+
+  if (!feedback.length) {
+    return (
+      <Card className="empty-card">
+        <EmptyState icon={MessageSquare} title="No Feedback Yet" description="Feedback requests and peer comments will be organized here." action={<Button variant="secondary">Request Feedback</Button>} />
+      </Card>
+    );
+  }
+
   return (
-    <Card>
-      <div className="flex flex-row items-center justify-between">
-        <h3 className="text-lg font-semibold">360° Feedback</h3>
-        <Button variant="secondary">Request Feedback</Button>
-      </div>
-      <div className="p-4">
-        {isLoading ? <p>Loading...</p> : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {feedback.map((f: any) => (
-              <div key={f._id || f.id} className="p-4 border rounded-lg bg-indigo-50">
-                <div className="flex justify-between mb-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-indigo-500">{f.feedbackType} FEEDBACK</span>
-                  <span className="text-sm text-gray-500">{new Date(f.feedbackDate).toLocaleDateString()}</span>
-                </div>
-                <p className="text-sm font-medium mb-1">To: {f.employee?.email}</p>
-                <p className="text-sm font-medium mb-3">From: {f.feedbackFrom?.email || 'Anonymous'}</p>
-                <p className="text-gray-700 italic">"{f.comments}"</p>
-                <div className="mt-3 flex items-center">
-                  <span className="text-indigo-600 font-bold">Rating: {f.rating}/5</span>
-                </div>
-              </div>
-            ))}
+    <div className="performance-grid two">
+      {feedback.map((item: any) => (
+        <article key={item._id || item.id} className="performance-card feedback-card">
+          <div className="performance-card-head">
+            <div className="card-icon blue">
+              <MessageSquare size={18} />
+            </div>
+            <span className="muted">{formatDate(item.feedbackDate)}</span>
           </div>
-        )}
-      </div>
-    </Card>
+          <div className="feedback-people">
+            <span>To: {item.employee?.name || item.employee?.email || "Employee"}</span>
+            <span>From: {item.feedbackFrom?.name || item.feedbackFrom?.email || "Anonymous"}</span>
+          </div>
+          <div className="quote-block">{item.comments || "No feedback comments added."}</div>
+          <strong className="rating-pill">Rating: {item.rating || 0}/5</strong>
+        </article>
+      ))}
+    </div>
   );
+}
+
+function clampPercent(value: unknown) {
+  const percent = Number(value ?? 0);
+  if (Number.isNaN(percent)) return 0;
+  return Math.min(100, Math.max(0, percent));
+}
+
+function formatDate(value: string | Date | undefined) {
+  if (!value) return "Not set";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Not set";
+  return date.toLocaleDateString();
 }

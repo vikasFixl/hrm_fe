@@ -10,6 +10,7 @@ import { AsyncSelect } from "../../components/ui/async-select";
 import { useToast } from "../../components/ui/toast";
 import { getErrorMessage } from "../../api/http";
 import { Badge } from "../../components/ui/badge";
+import { SkeletonRows } from "../../components/ui/skeleton";
 import { z } from "zod";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -145,7 +146,7 @@ export function OffersPage() {
           </thead>
           <tbody>
             {isLoading ? (
-              <tr><td colSpan={6} style={{ textAlign: "center", padding: 20 }}>Loading offers...</td></tr>
+              <SkeletonRows rows={5} cols={6} />
             ) : offers?.length === 0 ? (
               <tr><td colSpan={6} style={{ textAlign: "center", padding: 40, color: "var(--text-muted)" }}>No offers generated yet.</td></tr>
             ) : (

@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { trainingApi, employeeApi } from "../../api/hrm-api";
 import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
+import { SkeletonCard } from "../../components/ui/skeleton";
+import { Tabs } from "../../components/ui/tabs";
 
 
 
@@ -13,18 +15,25 @@ export function TrainingDashboard() {
   const [activeTab, setActiveTab] = useState("sessions");
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Training & Development</h1>
+    <div className="performance-page page-fade">
+      <div className="page-title">
+        <div>
+          <h1>Training & Development</h1>
+          <p>Manage learning sessions, materials and employee certifications.</p>
+        </div>
       </div>
 
-      <div className="space-y-4">
-        <div className="flex space-x-2 border-b pb-2">
-          <button className={`px-4 py-2 font-medium ${activeTab === "sessions" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500"}`} onClick={() => setActiveTab("sessions")}>Training Sessions</button>
-          <button className={`px-4 py-2 font-medium ${activeTab === "materials" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500"}`} onClick={() => setActiveTab("materials")}>Learning Materials</button>
-          <button className={`px-4 py-2 font-medium ${activeTab === "certifications" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500"}`} onClick={() => setActiveTab("certifications")}>Certifications</button>
-        </div>
+      <Tabs
+        value={activeTab}
+        tabs={[
+          { value: "sessions", label: "Training Sessions" },
+          { value: "materials", label: "Learning Materials" },
+          { value: "certifications", label: "Certifications" }
+        ]}
+        onChange={setActiveTab}
+      />
 
+      <div className="tab-panel">
         {activeTab === "sessions" && (<div>
           <SessionsTab />
         </div>)}
@@ -54,7 +63,7 @@ function SessionsTab() {
         <CreateSessionModal />
       </div>
       <div className="p-4">
-        {isLoading ? <p>Loading sessions...</p> : (
+        {isLoading ? <DashboardCardSkeletons /> : (
           <div className="space-y-4">
             {sessions.map((s: any) => (
               <div key={s._id || s.id} className="p-4 border rounded-lg flex justify-between items-center bg-gray-50">
@@ -76,7 +85,7 @@ function SessionsTab() {
                 </div>
               </div>
             ))}
-            {sessions.length === 0 && <p className="text-gray-500">No training sessions found.</p>}
+            {sessions.length === 0 && <p className="text-gray-500">Training sessions will appear here once scheduled.</p>}
           </div>
         )}
       </div>
@@ -118,7 +127,7 @@ function CreateSessionModal() {
           </div>
           <div>
             <label className="text-sm font-medium">Instructor</label>
-            <input className="flex h-10 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" placeholder="Search employee..." onChange={(e: any) => setEmployeeId(e.target.value)} />
+            <input className="flex h-10 w-full rounded-md border border-gray-300 px-3 py-2 text-sm" placeholder="Search employee..." onChange={(e: any) => setInstructorId(e.target.value)} />
           </div>
           <div className="flex space-x-4">
             <div className="flex-1">
@@ -163,7 +172,7 @@ function MaterialsTab() {
         <Button variant="secondary">Upload Material</Button>
       </div>
       <div className="p-4">
-        {isLoading ? <p>Loading...</p> : (
+        {isLoading ? <DashboardCardSkeletons count={4} /> : (
           <div className="grid gap-4 md:grid-cols-2">
             {materials.map((m: any) => (
               <div key={m._id || m.id} className="p-4 border rounded-lg bg-white shadow-sm flex items-start space-x-4">
@@ -177,7 +186,7 @@ function MaterialsTab() {
                 </div>
               </div>
             ))}
-            {materials.length === 0 && <p className="text-gray-500">No learning materials found.</p>}
+            {materials.length === 0 && <p className="text-gray-500">Learning materials will appear here once uploaded.</p>}
           </div>
         )}
       </div>
@@ -199,7 +208,7 @@ function CertificationsTab() {
         <Button>Add Certification</Button>
       </div>
       <div className="p-4">
-        {isLoading ? <p>Loading...</p> : (
+        {isLoading ? <DashboardCardSkeletons count={4} /> : (
           <div className="space-y-4">
             {certs.map((c: any) => (
               <div key={c._id || c.id} className="p-4 border-l-4 border-amber-500 bg-amber-50 rounded-r-lg shadow-sm">
@@ -220,5 +229,15 @@ function CertificationsTab() {
         )}
       </div>
     </Card>
+  );
+}
+
+function DashboardCardSkeletons({ count = 6 }: { count?: number }) {
+  return (
+    <div className="performance-grid">
+      {Array.from({ length: count }).map((_, index) => (
+        <SkeletonCard key={index} lines={4} />
+      ))}
+    </div>
   );
 }

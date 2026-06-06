@@ -6,8 +6,8 @@ describe("DataTable", () => {
   it("shows an empty state across all columns", () => {
     render(<DataTable columns={["Name", "Status"]} empty />);
 
-    expect(screen.getByText("No records found")).toBeInTheDocument();
-    expect(screen.getByText("No records found").closest("td")).toHaveAttribute("colspan", "2");
+    expect(screen.getByText("Nothing here yet")).toBeInTheDocument();
+    expect(screen.getByText("Nothing here yet").closest("td")).toHaveAttribute("colspan", "2");
   });
 
   it("renders provided rows", () => {

@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { travelApi, employeeApi } from "../../api/hrm-api";
 import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
+import { SkeletonCard } from "../../components/ui/skeleton";
+import { Tabs } from "../../components/ui/tabs";
 
 
 
@@ -12,18 +14,25 @@ export function TravelDashboard() {
   const [activeTab, setActiveTab] = useState("requests");
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Travel Management</h1>
+    <div className="performance-page page-fade">
+      <div className="page-title">
+        <div>
+          <h1>Travel Management</h1>
+          <p>Manage travel requests, expenses and company travel policies.</p>
+        </div>
       </div>
 
-      <div className="space-y-4">
-        <div className="flex space-x-2 border-b pb-2">
-          <button className={`px-4 py-2 font-medium ${activeTab === "requests" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500"}`} onClick={() => setActiveTab("requests")}>Travel Requests</button>
-          <button className={`px-4 py-2 font-medium ${activeTab === "expenses" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500"}`} onClick={() => setActiveTab("expenses")}>Travel Expenses</button>
-          <button className={`px-4 py-2 font-medium ${activeTab === "policies" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500"}`} onClick={() => setActiveTab("policies")}>Travel Policies</button>
-        </div>
+      <Tabs
+        value={activeTab}
+        tabs={[
+          { value: "requests", label: "Travel Requests" },
+          { value: "expenses", label: "Travel Expenses" },
+          { value: "policies", label: "Travel Policies" }
+        ]}
+        onChange={setActiveTab}
+      />
 
+      <div className="tab-panel">
         {activeTab === "requests" && (<div>
           <RequestsTab />
         </div>)}
@@ -53,7 +62,7 @@ function RequestsTab() {
         <CreateRequestModal />
       </div>
       <div className="p-4">
-        {isLoading ? <p>Loading requests...</p> : (
+        {isLoading ? <DashboardCardSkeletons /> : (
           <div className="space-y-4">
             {requests.map((r: any) => (
               <div key={r._id || r.id} className="p-4 border rounded-lg flex justify-between items-center bg-white shadow-sm">
@@ -83,7 +92,7 @@ function RequestsTab() {
                 </div>
               </div>
             ))}
-            {requests.length === 0 && <p className="text-gray-500">No travel requests found.</p>}
+            {requests.length === 0 && <p className="text-gray-500">Travel requests will appear here once submitted.</p>}
           </div>
         )}
       </div>
@@ -195,7 +204,7 @@ function ExpensesTab() {
         <Button variant="secondary">Log Expense</Button>
       </div>
       <div className="p-4">
-        {isLoading ? <p>Loading...</p> : (
+        {isLoading ? <DashboardCardSkeletons count={4} /> : (
           <div className="grid gap-4 md:grid-cols-2">
             {expenses.map((e: any) => (
               <div key={e._id || e.id} className="p-4 border rounded-lg bg-orange-50 shadow-sm">
@@ -231,7 +240,7 @@ function PoliciesTab() {
         <Button>New Policy</Button>
       </div>
       <div className="p-4">
-        {isLoading ? <p>Loading...</p> : (
+        {isLoading ? <DashboardCardSkeletons count={4} /> : (
           <div className="space-y-4">
             {policies.map((p: any) => (
               <div key={p._id || p.id} className="p-4 border-l-4 border-slate-700 bg-slate-50 rounded-r-lg shadow-sm">
@@ -252,5 +261,15 @@ function PoliciesTab() {
         )}
       </div>
     </Card>
+  );
+}
+
+function DashboardCardSkeletons({ count = 6 }: { count?: number }) {
+  return (
+    <div className="performance-grid">
+      {Array.from({ length: count }).map((_, index) => (
+        <SkeletonCard key={index} lines={4} />
+      ))}
+    </div>
   );
 }

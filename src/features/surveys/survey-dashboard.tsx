@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { surveyApi, employeeApi } from "../../api/hrm-api";
 import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
+import { SkeletonCard, SkeletonList } from "../../components/ui/skeleton";
+import { Tabs } from "../../components/ui/tabs";
 
 
 
@@ -13,18 +15,25 @@ export function SurveyDashboard() {
   const [activeTab, setActiveTab] = useState("surveys");
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Surveys & Feedback</h1>
+    <div className="performance-page page-fade">
+      <div className="page-title">
+        <div>
+          <h1>Surveys & Feedback</h1>
+          <p>Run pulse surveys, review employee feedback and track action plans.</p>
+        </div>
       </div>
 
-      <div className="space-y-4">
-        <div className="flex space-x-2 border-b pb-2">
-          <button className={`px-4 py-2 font-medium ${activeTab === "surveys" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500"}`} onClick={() => setActiveTab("surveys")}>Active Surveys</button>
-          <button className={`px-4 py-2 font-medium ${activeTab === "feedback" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500"}`} onClick={() => setActiveTab("feedback")}>Employee Feedback</button>
-          <button className={`px-4 py-2 font-medium ${activeTab === "action-plans" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500"}`} onClick={() => setActiveTab("action-plans")}>Action Plans</button>
-        </div>
+      <Tabs
+        value={activeTab}
+        tabs={[
+          { value: "surveys", label: "Active Surveys" },
+          { value: "feedback", label: "Employee Feedback" },
+          { value: "action-plans", label: "Action Plans" }
+        ]}
+        onChange={setActiveTab}
+      />
 
+      <div className="tab-panel">
         {activeTab === "surveys" && (<div>
           <SurveysTab />
         </div>)}
@@ -54,7 +63,7 @@ function SurveysTab() {
         <CreateSurveyModal />
       </div>
       <div className="p-4">
-        {isLoading ? <p>Loading surveys...</p> : (
+        {isLoading ? <DashboardCardSkeletons /> : (
           <div className="space-y-4">
             {surveys.map((s: any) => (
               <div key={s._id || s.id} className="p-4 border rounded-lg flex justify-between items-center bg-white shadow-sm">
@@ -76,7 +85,7 @@ function SurveysTab() {
                 </div>
               </div>
             ))}
-            {surveys.length === 0 && <p className="text-gray-500">No surveys found.</p>}
+            {surveys.length === 0 && <p className="text-gray-500">Survey campaigns will appear here once drafted.</p>}
           </div>
         )}
       </div>
@@ -161,7 +170,7 @@ function FeedbackTab() {
         <h3 className="text-lg font-semibold">Continuous Employee Feedback</h3>
       </div>
       <div className="p-4">
-        {isLoading ? <p>Loading...</p> : (
+        {isLoading ? <SkeletonList rows={5} /> : (
           <div className="grid gap-4 md:grid-cols-2">
             {feedback.map((f: any) => (
               <div key={f._id || f.id} className="p-4 border rounded-lg bg-teal-50 shadow-sm">
@@ -200,7 +209,7 @@ function ActionPlansTab() {
         <Button variant="secondary">Create Plan</Button>
       </div>
       <div className="p-4">
-        {isLoading ? <p>Loading...</p> : (
+        {isLoading ? <DashboardCardSkeletons count={4} /> : (
           <div className="space-y-4">
             {plans.map((p: any) => (
               <div key={p._id || p.id} className="p-4 border-l-4 border-purple-500 bg-purple-50 rounded-r-lg shadow-sm">
@@ -223,5 +232,15 @@ function ActionPlansTab() {
         )}
       </div>
     </Card>
+  );
+}
+
+function DashboardCardSkeletons({ count = 6 }: { count?: number }) {
+  return (
+    <div className="performance-grid">
+      {Array.from({ length: count }).map((_, index) => (
+        <SkeletonCard key={index} lines={4} />
+      ))}
+    </div>
   );
 }

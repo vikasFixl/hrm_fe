@@ -3,7 +3,7 @@ import { ReactNode } from "react";
 
 export function EmptyState({
   icon: Icon = Inbox,
-  title = "No records found",
+  title = "Nothing here yet",
   description = "There are no items to display yet.",
   action,
 }: {

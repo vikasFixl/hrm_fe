@@ -1,5 +1,6 @@
 import { ReactNode } from "react";
 import { ChevronLeft, ChevronRight, Inbox } from "lucide-react";
+import { SkeletonRows } from "./skeleton";
 
 type DataTableProps = {
   columns: string[];
@@ -33,15 +34,7 @@ export function DataTable({ columns, children, empty, loading, toolbar, paginati
           </thead>
           <tbody>
             {loading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <tr key={i}>
-                  {columns.map((col) => (
-                    <td key={col}>
-                      <div className="skeleton skeleton-text" style={{ width: `${50 + Math.random() * 30}%` }} />
-                    </td>
-                  ))}
-                </tr>
-              ))
+              <SkeletonRows rows={5} cols={columns.length} />
             ) : empty ? (
               <tr>
                 <td colSpan={columns.length}>
@@ -49,7 +42,7 @@ export function DataTable({ columns, children, empty, loading, toolbar, paginati
                     <div className="empty-state-icon">
                       <Inbox size={24} />
                     </div>
-                    <h3>No records found</h3>
+                    <h3>Nothing here yet</h3>
                     <p>There are no items to display. Create one to get started.</p>
                   </div>
                 </td>

@@ -4,6 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { expenseApi, employeeApi } from "../../api/hrm-api";
 import { Card } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
+import { SkeletonCard } from "../../components/ui/skeleton";
+import { Tabs } from "../../components/ui/tabs";
 
 
 
@@ -13,17 +15,24 @@ export function ExpenseDashboard() {
   const [activeTab, setActiveTab] = useState("submissions");
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Expense Management</h1>
+    <div className="performance-page page-fade">
+      <div className="page-title">
+        <div>
+          <h1>Expense Management</h1>
+          <p>Review employee claims, approvals and reimbursement processing.</p>
+        </div>
       </div>
 
-      <div className="space-y-4">
-        <div className="flex space-x-2 border-b pb-2">
-          <button className={`px-4 py-2 font-medium ${activeTab === "submissions" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500"}`} onClick={() => setActiveTab("submissions")}>Expenses</button>
-          <button className={`px-4 py-2 font-medium ${activeTab === "reimbursements" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500"}`} onClick={() => setActiveTab("reimbursements")}>Reimbursements</button>
-        </div>
+      <Tabs
+        value={activeTab}
+        tabs={[
+          { value: "submissions", label: "Expenses" },
+          { value: "reimbursements", label: "Reimbursements" }
+        ]}
+        onChange={setActiveTab}
+      />
 
+      <div className="tab-panel">
         {activeTab === "submissions" && (<div>
           <ExpensesTab />
         </div>)}
@@ -50,7 +59,7 @@ function ExpensesTab() {
         <CreateExpenseModal />
       </div>
       <div className="p-4">
-        {isLoading ? <p>Loading expenses...</p> : (
+        {isLoading ? <DashboardCardSkeletons /> : (
           <div className="space-y-4">
             {expenses.map((e: any) => (
               <div key={e._id || e.id} className="p-4 border rounded-lg flex justify-between items-center bg-white shadow-sm">
@@ -79,7 +88,7 @@ function ExpensesTab() {
                 </div>
               </div>
             ))}
-            {expenses.length === 0 && <p className="text-gray-500">No expense claims found.</p>}
+            {expenses.length === 0 && <p className="text-gray-500">Expense claims will appear here once submitted.</p>}
           </div>
         )}
       </div>
@@ -185,7 +194,7 @@ function ReimbursementsTab() {
         <Button>Process Reimbursement</Button>
       </div>
       <div className="p-4">
-        {isLoading ? <p>Loading...</p> : (
+        {isLoading ? <DashboardCardSkeletons count={4} /> : (
           <div className="space-y-4">
             {reimbursements.map((r: any) => (
               <div key={r._id || r.id} className="p-4 border rounded-lg bg-slate-50">
@@ -208,5 +217,15 @@ function ReimbursementsTab() {
         )}
       </div>
     </Card>
+  );
+}
+
+function DashboardCardSkeletons({ count = 6 }: { count?: number }) {
+  return (
+    <div className="performance-grid">
+      {Array.from({ length: count }).map((_, index) => (
+        <SkeletonCard key={index} lines={4} />
+      ))}
+    </div>
   );
 }

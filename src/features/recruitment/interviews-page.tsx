@@ -11,6 +11,7 @@ import { useToast } from "../../components/ui/toast";
 import { getErrorMessage } from "../../api/http";
 import { Avatar } from "../../components/ui/avatar";
 import { Badge } from "../../components/ui/badge";
+import { SkeletonCard } from "../../components/ui/skeleton";
 import { z } from "zod";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -123,7 +124,7 @@ export function InterviewsPage() {
 
       <div className="content-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px', marginTop: '24px' }}>
         {isLoading ? (
-          <div className="loading-state">Loading interviews...</div>
+          Array.from({ length: 6 }).map((_, index) => <SkeletonCard key={index} lines={4} />)
         ) : !interviews?.length ? (
           <div className="empty-state" style={{ gridColumn: '1 / -1' }}>
             <CalendarIcon size={48} />

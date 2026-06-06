@@ -1,8 +1,9 @@
 // @ts-nocheck
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Filter, Plus } from "lucide-react";
+import { CalendarPlus, FileText, Filter, Plus, UserCheck } from "lucide-react";
 import { recruitmentApi } from "../../api/hrm-api";
 import { Candidate } from "../../api/types";
 import { getErrorMessage } from "../../api/http";
@@ -56,6 +57,10 @@ type CandidateForm = z.infer<typeof candidateSchema>;
 export function CandidateTrackingPage() {
   const [open, setOpen] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<string | null>(null);
+  const [pendingMove, setPendingMove] = useState<{ candidate: any; status: string } | null>(null);
+  const [selectedInterviewId, setSelectedInterviewId] = useState("");
+  const [selectedOfferId, setSelectedOfferId] = useState("");
+  const navigate = useNavigate();
   const form = useForm<CandidateForm>({
     resolver: zodResolver(candidateSchema)
   });
@@ -64,6 +69,8 @@ export function CandidateTrackingPage() {
   
   const jobs = useQuery({ queryKey: ["jobs"], queryFn: recruitmentApi.listJobs });
   const candidates = useQuery({ queryKey: ["candidates"], queryFn: recruitmentApi.listCandidates });
+  const interviews = useQuery({ queryKey: ["interviews"], queryFn: () => recruitmentApi.listInterviews() });
+  const offers = useQuery({ queryKey: ["offers"], queryFn: () => recruitmentApi.listOffers() });
 
   const create = useMutation({
     mutationFn: (values: CandidateForm) => {
@@ -101,13 +108,60 @@ export function CandidateTrackingPage() {
   });
 
   const moveStatus = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) => recruitmentApi.updateCandidateStatus(id, status),
+    mutationFn: ({ id, payload }: { id: string; payload: any }) => recruitmentApi.updateCandidateStatus(id, payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["candidates"] });
+      await queryClient.invalidateQueries({ queryKey: ["offers"] });
+      await queryClient.invalidateQueries({ queryKey: ["interviews"] });
+      setPendingMove(null);
+      setSelectedInterviewId("");
+      setSelectedOfferId("");
       notify("Candidate status updated", "success");
     },
     onError: (error) => notify(getErrorMessage(error), "error")
   });
+
+  const openTransitionModal = (candidate: any, status: string) => {
+    if (["Interview_Scheduled", "Offered", "Hired"].includes(status)) {
+      setPendingMove({ candidate, status });
+      setSelectedInterviewId("");
+      setSelectedOfferId("");
+      return;
+    }
+
+    moveStatus.mutate({ id: candidate._id, payload: { status } });
+  };
+
+  const candidateInterviews = pendingMove
+    ? (interviews.data || []).filter((interview: any) => {
+        const candidate = interview.candidate;
+        const candidateId = typeof candidate === "object" ? candidate?._id : candidate;
+        return candidateId === pendingMove.candidate._id && interview.status === "Scheduled";
+      })
+    : [];
+
+  const candidateOffers = pendingMove
+    ? (offers.data || []).filter((offer: any) => {
+        const candidate = offer.candidate;
+        const candidateId = typeof candidate === "object" ? candidate?._id : candidate;
+        return candidateId === pendingMove.candidate._id;
+      })
+    : [];
+
+  const submitTransition = () => {
+    if (!pendingMove) return;
+    const payload: any = { status: pendingMove.status };
+
+    if (pendingMove.status === "Interview_Scheduled") {
+      payload.interviewId = selectedInterviewId;
+    }
+
+    if (pendingMove.status === "Offered" || pendingMove.status === "Hired") {
+      payload.offerId = selectedOfferId;
+    }
+
+    moveStatus.mutate({ id: pendingMove.candidate._id, payload });
+  };
 
   return (
     <>
@@ -164,7 +218,7 @@ export function CandidateTrackingPage() {
                           style={{ fontSize: 12, padding: '4px 8px', height: 'auto', background: 'var(--surface-50)' }}
                           value="" 
                           onChange={(e) => {
-                            if(e.target.value) moveStatus.mutate({ id: candidate._id, status: e.target.value })
+                            if(e.target.value) openTransitionModal(candidate, e.target.value)
                           }}
                        >
                          <option value="" disabled>Move to...</option>
@@ -270,6 +324,78 @@ export function CandidateTrackingPage() {
             <Button type="submit" loading={create.isPending}>Add Candidate</Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal
+        title={pendingMove ? `Move to ${pendingMove.status.replace("_", " ")}` : "Move Candidate"}
+        open={Boolean(pendingMove)}
+        onClose={() => setPendingMove(null)}
+        size="normal"
+      >
+        {pendingMove && (
+          <div className="form-grid">
+            <div className="empty-state" style={{ padding: 18 }}>
+              <div className="empty-state-icon">
+                {pendingMove.status === "Interview_Scheduled" ? <CalendarPlus size={22} /> : pendingMove.status === "Offered" ? <FileText size={22} /> : <UserCheck size={22} />}
+              </div>
+              <h3>{pendingMove.candidate.name}</h3>
+              <p>Confirm the required recruitment record before moving this candidate.</p>
+            </div>
+
+            {pendingMove.status === "Interview_Scheduled" && (
+              <Field label="Scheduled Interview" required>
+                {candidateInterviews.length ? (
+                  <Select value={selectedInterviewId} onChange={(event) => setSelectedInterviewId(event.target.value)}>
+                    <option value="">Select interview</option>
+                    {candidateInterviews.map((interview: any) => (
+                      <option key={interview._id} value={interview._id}>
+                        {new Date(interview.scheduledDate).toLocaleString()} - {interview.interviewType}
+                      </option>
+                    ))}
+                  </Select>
+                ) : (
+                  <Button type="button" icon={<CalendarPlus size={16} />} onClick={() => navigate("/hrm/interviews")}>
+                    Schedule Interview
+                  </Button>
+                )}
+              </Field>
+            )}
+
+            {(pendingMove.status === "Offered" || pendingMove.status === "Hired") && (
+              <Field label="Offer" required>
+                {candidateOffers.length ? (
+                  <Select value={selectedOfferId} onChange={(event) => setSelectedOfferId(event.target.value)}>
+                    <option value="">Select offer</option>
+                    {candidateOffers.map((offer: any) => (
+                      <option key={offer._id} value={offer._id}>
+                        {offer.offerDetails?.currency} {offer.offerDetails?.baseSalary?.toLocaleString()} - {offer.status}
+                      </option>
+                    ))}
+                  </Select>
+                ) : (
+                  <Button type="button" icon={<FileText size={16} />} onClick={() => navigate("/hrm/offers")}>
+                    Create Offer
+                  </Button>
+                )}
+              </Field>
+            )}
+
+            <div className="form-actions">
+              <Button type="button" variant="secondary" onClick={() => setPendingMove(null)}>Cancel</Button>
+              <Button
+                type="button"
+                loading={moveStatus.isPending}
+                disabled={
+                  (pendingMove.status === "Interview_Scheduled" && !selectedInterviewId) ||
+                  ((pendingMove.status === "Offered" || pendingMove.status === "Hired") && !selectedOfferId)
+                }
+                onClick={submitTransition}
+              >
+                Confirm Move
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
 
       <CandidateDetailDrawer candidateId={selectedCandidate} onClose={() => setSelectedCandidate(null)} />
