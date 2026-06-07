@@ -28,14 +28,38 @@ type LeaveForm = {
   hours?: number;
   reason?: string;
 };
-type LeaveTypeForm = { name: string; code?: string };
+type LeaveTypeForm = {
+  name: string;
+  code: string;
+  isPaid: "true" | "false";
+  annualAllocation?: number;
+  allowHalfDay?: "true" | "false";
+  accrualType?: "MONTHLY" | "YEARLY";
+  monthlyAccrual?: number;
+  maxCarryForward?: number;
+  allowEncashment?: "true" | "false";
+  maxEncashable?: number;
+};
+
+const leaveTypeDefaults: LeaveTypeForm = {
+  name: "",
+  code: "",
+  isPaid: "true",
+  allowHalfDay: "false",
+  accrualType: "YEARLY",
+  allowEncashment: "false",
+  annualAllocation: 0,
+  monthlyAccrual: 0,
+  maxCarryForward: 0,
+  maxEncashable: 0
+};
 
 export function LeavePage() {
   const [tab, setTab] = useState<LeaveTab>("mine");
   const [open, setOpen] = useState(false);
   const [typeOpen, setTypeOpen] = useState(false);
   const form = useForm<LeaveForm>();
-  const typeForm = useForm<LeaveTypeForm>();
+  const typeForm = useForm<LeaveTypeForm>({ defaultValues: leaveTypeDefaults });
   const queryClient = useQueryClient();
   const { notify } = useToast();
   const { employee } = useAuth();
@@ -65,7 +89,7 @@ export function LeavePage() {
   });
 
   const reject = useMutation({
-    mutationFn: leaveApi.reject,
+    mutationFn: ({ id, reason }: { id: string; reason: string }) => leaveApi.reject(id, reason),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["leave"] });
       notify("Leave rejected", "success");
@@ -78,10 +102,13 @@ export function LeavePage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ["leave", "types"] });
       setTypeOpen(false);
+      typeForm.reset(leaveTypeDefaults);
       notify("Leave type created", "success");
     },
     onError: (error) => notify(getErrorMessage(error), "error")
   });
+
+  const paidLeave = typeForm.watch("isPaid") !== "false";
 
   return (
     <>
@@ -91,7 +118,7 @@ export function LeavePage() {
           <p>Submit leave requests, review approvals, and maintain leave types.</p>
         </div>
         <div className="toolbar">
-          {canManageLeave && <Button variant="secondary" icon={<Plus size={16} />} onClick={() => { typeForm.reset(); setTypeOpen(true); }}>Leave Type</Button>}
+          {canManageLeave && <Button variant="secondary" icon={<Plus size={16} />} onClick={() => { typeForm.reset(leaveTypeDefaults); setTypeOpen(true); }}>Leave Type</Button>}
           <Button icon={<Plus size={16} />} onClick={() => { form.reset(); setOpen(true); }}>Request Leave</Button>
         </div>
       </div>
@@ -117,7 +144,7 @@ export function LeavePage() {
           <DataTable columns={["Leave Type", "Duration", "Half Day", "Hours", "Reason", "Status"]} empty={!mine.data?.length} loading={mine.isLoading}>
             {mine.data?.map((request) => (
               <tr key={request._id}>
-                <td><strong>{request.leaveType}</strong></td>
+                <td><strong>{leaveTypeLabel(request.leaveType)}</strong></td>
                 <td style={{ color: "var(--text-muted)" }}>{formatDate(request.startDate)} – {formatDate(request.endDate)}</td>
                 <td>{request.isHalfDay ? <Badge tone="blue">{request.halfDaySession}</Badge> : <span className="muted">No</span>}</td>
                 <td>{request.hours || "-"}</td>
@@ -138,14 +165,17 @@ export function LeavePage() {
                     <span>{personName(request.employeeId)}</span>
                   </div>
                 </td>
-                <td><strong>{request.leaveType}</strong></td>
+                <td><strong>{leaveTypeLabel(request.leaveType)}</strong></td>
                 <td style={{ color: "var(--text-muted)" }}>{formatDate(request.startDate)} – {formatDate(request.endDate)}</td>
                 <td style={{ color: "var(--text-muted)" }}>{request.reason || "-"}</td>
                 <td><LeaveStatus status={request.status} /></td>
                 <td>
                   <div className="toolbar">
                     <Button variant="ghost" size="sm" iconOnly icon={<Check size={15} />} onClick={() => approve.mutate(request._id)} aria-label="Approve" />
-                    <Button variant="ghost" size="sm" iconOnly icon={<X size={15} />} onClick={() => reject.mutate(request._id)} aria-label="Reject" />
+                    <Button variant="ghost" size="sm" iconOnly icon={<X size={15} />} onClick={() => {
+                      const reason = window.prompt("Rejection reason");
+                      if (reason?.trim()) reject.mutate({ id: request._id, reason: reason.trim() });
+                    }} aria-label="Reject" />
                   </div>
                 </td>
               </tr>
@@ -154,11 +184,14 @@ export function LeavePage() {
         )}
 
         {tab === "types" && (
-          <DataTable columns={["Name", "Code", "Status"]} empty={!types.data?.length} loading={types.isLoading}>
+          <DataTable columns={["Name", "Code", "Paid", "Allocation", "Half Day", "Status"]} empty={!types.data?.length} loading={types.isLoading}>
             {types.data?.map((type) => (
               <tr key={type._id}>
                 <td><strong>{type.name || "-"}</strong></td>
                 <td><Badge tone="neutral">{type.code || "-"}</Badge></td>
+                <td><Badge tone={type.isPaid ? "green" : "yellow"}>{type.isPaid ? "Paid" : "Unpaid"}</Badge></td>
+                <td>{type.annualAllocation ?? "-"}</td>
+                <td>{type.allowHalfDay ? "Allowed" : "No"}</td>
                 <td><Badge tone={type.isActive === false ? "red" : "green"} dot>{type.isActive === false ? "Inactive" : "Active"}</Badge></td>
               </tr>
             ))}
@@ -169,7 +202,14 @@ export function LeavePage() {
       <Modal title="Request Leave" open={open} onClose={() => setOpen(false)}>
         <form className="form-grid" onSubmit={form.handleSubmit((values) => create.mutate({ ...values, isHalfDay: Boolean(values.halfDaySession) }))}>
           <Field label="Leave Type" required>
-            <Input {...form.register("leaveType", { required: true })} />
+            <Select {...form.register("leaveType", { required: true })}>
+              <option value="">Select leave type</option>
+              {types.data?.map((type) => (
+                <option key={type._id} value={type._id}>
+                  {type.name} ({type.code}){type.allowHalfDay ? " - half day allowed" : ""}
+                </option>
+              ))}
+            </Select>
           </Field>
           <div className="form-grid two">
             <Field label="Start Date" required>
@@ -200,12 +240,67 @@ export function LeavePage() {
       </Modal>
 
       <Modal title="Create Leave Type" open={typeOpen} onClose={() => setTypeOpen(false)}>
-        <form className="form-grid" onSubmit={typeForm.handleSubmit((values) => createType.mutate(values))}>
+        <form className="form-grid" onSubmit={typeForm.handleSubmit((values) => createType.mutate({
+          name: values.name,
+          code: values.code,
+          isPaid: values.isPaid !== "false",
+          annualAllocation: values.isPaid !== "false" ? Number(values.annualAllocation || 0) : null,
+          allowHalfDay: values.allowHalfDay === "true",
+          accrualType: values.accrualType || "YEARLY",
+          monthlyAccrual: Number(values.monthlyAccrual || 0),
+          maxCarryForward: Number(values.maxCarryForward || 0),
+          allowEncashment: values.allowEncashment === "true",
+          maxEncashable: Number(values.maxEncashable || 0)
+        }))}>
           <Field label="Name" required>
             <Input {...typeForm.register("name", { required: true })} />
           </Field>
-          <Field label="Code">
-            <Input {...typeForm.register("code")} />
+          <div className="form-grid two">
+          <Field label="Code" required>
+            <Input {...typeForm.register("code", { required: true })} placeholder="AL, SL, LWP" />
+          </Field>
+          <Field label="Paid leave" required>
+            <Select {...typeForm.register("isPaid", { required: true })}>
+              <option value="true">Paid</option>
+              <option value="false">Unpaid</option>
+            </Select>
+          </Field>
+          </div>
+          <div className="form-grid two">
+            <Field label="Annual allocation" required={paidLeave}>
+              <Input type="number" min="0" {...typeForm.register("annualAllocation", { valueAsNumber: true, required: paidLeave })} disabled={!paidLeave} />
+            </Field>
+            <Field label="Allow half day">
+              <Select {...typeForm.register("allowHalfDay")}>
+                <option value="false">No</option>
+                <option value="true">Yes</option>
+              </Select>
+            </Field>
+          </div>
+          <div className="form-grid two">
+            <Field label="Accrual type">
+              <Select {...typeForm.register("accrualType")}>
+                <option value="YEARLY">Yearly</option>
+                <option value="MONTHLY">Monthly</option>
+              </Select>
+            </Field>
+            <Field label="Monthly accrual">
+              <Input type="number" min="0" step="0.5" {...typeForm.register("monthlyAccrual", { valueAsNumber: true })} />
+            </Field>
+          </div>
+          <div className="form-grid two">
+            <Field label="Max carry forward">
+              <Input type="number" min="0" {...typeForm.register("maxCarryForward", { valueAsNumber: true })} />
+            </Field>
+            <Field label="Allow encashment">
+              <Select {...typeForm.register("allowEncashment")}>
+                <option value="false">No</option>
+                <option value="true">Yes</option>
+              </Select>
+            </Field>
+          </div>
+          <Field label="Max encashable">
+            <Input type="number" min="0" {...typeForm.register("maxEncashable", { valueAsNumber: true })} />
           </Field>
           <div className="form-actions">
             <Button type="button" variant="secondary" onClick={() => setTypeOpen(false)}>Cancel</Button>
@@ -220,4 +315,10 @@ export function LeavePage() {
 function LeaveStatus({ status }: { status: "Pending" | "Approved" | "Rejected" }) {
   const tone = status === "Approved" ? "green" : status === "Rejected" ? "red" : "yellow";
   return <Badge tone={tone} dot>{status}</Badge>;
+}
+
+function leaveTypeLabel(leaveType: any) {
+  if (!leaveType) return "-";
+  if (typeof leaveType === "string") return leaveType;
+  return [leaveType.name, leaveType.code ? `(${leaveType.code})` : ""].filter(Boolean).join(" ");
 }

@@ -102,6 +102,13 @@ export const employeeOnboardingApi = {
   }
 };
 
+export const dashboardApi = {
+  get: async () => {
+    const { data } = await http.get("/dashboard");
+    return data;
+  }
+};
+
 export const attendanceShiftApi = {
   list: async (params?: { search?: string }) => {
     const { data } = await http.get("/attendance/shifts/list", { params });
@@ -329,8 +336,8 @@ export const leaveApi = {
     const { data } = await http.post(`/leave/request/approve/${id}`);
     return data;
   },
-  reject: async (id: string) => {
-    const { data } = await http.post(`/leave/request/reject/${id}`);
+  reject: async (id: string, reason: string) => {
+    const { data } = await http.post(`/leave/request/reject/${id}`, { reason });
     return data;
   },
   createType: async (payload: any) => {

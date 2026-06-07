@@ -78,7 +78,7 @@ type TopbarMenu = "org" | "quick" | "messages" | "notifications" | "theme" | "pr
 const modules: ModuleNavItem[] = [
   { key: "dashboard", label: "Dashboard", to: "/hrm/dashboard", icon: LayoutDashboard, features: ["dashboard"], paths: ["/hrm/dashboard"] },
   { key: "people", label: "People", to: "/hrm/employees", icon: Users, features: ["employees", "organization"], paths: ["/hrm/employees", "/hrm/lifecycle", "/hrm/departments", "/hrm/positions"] },
-  { key: "attendance", label: "Attendance", to: "/hrm/attendance", icon: CalendarCheck, features: ["attendance"], paths: ["/hrm/attendance"] },
+  { key: "attendance", label: "Attendance", to: "/hrm/attendance", icon: CalendarCheck, features: ["attendance"], paths: ["/hrm/attendance", "/hrm/attendance/shifts", "/hrm/attendance/policy"] },
   { key: "leave", label: "Leave", to: "/hrm/leave", icon: ClipboardList, features: ["leave"], paths: ["/hrm/leave"] },
   { key: "payroll", label: "Payroll", to: "/hrm/payroll", icon: CreditCard, features: ["payroll"], paths: ["/hrm/payroll"] },
   { key: "recruitment", label: "Recruitment", to: "/hrm/jobs", icon: Briefcase, features: ["recruitment"], paths: ["/hrm/jobs", "/hrm/candidates", "/hrm/interviews", "/hrm/offers", "/hrm/recruitment-analytics"] },
@@ -134,8 +134,8 @@ const titles: Record<string, string> = {
   positions: "People",
   leave: "Leave",
   attendance: "Attendance",
-  "shifts": "Attendance",
-  "policy": "Attendance",
+  shifts: "Shift Master",
+  policy: "Attendance Policy",
   jobs: "Recruitment",
   candidates: "Recruitment",
   interviews: "Recruitment",
@@ -160,6 +160,7 @@ const pinnedRoutes = [
   "/hrm/employees",
   "/hrm/attendance",
   "/hrm/attendance/shifts",
+  "/hrm/attendance/policy",
   "/hrm/payroll",
   "/hrm/reports",
 ];
@@ -194,8 +195,10 @@ export function HrmLayout() {
   const { employee, logout } = useAuth();
   const empName = employee?.employeeCode || "User";
   const activeModule = getActiveModule(location.pathname);
-  const routeKey = location.pathname.split("/")[2] || "dashboard";
-  const title = titles[routeKey] || activeModule.label;
+  const routeParts = location.pathname.split("/").filter(Boolean);
+  const routeKey = routeParts[2] || "dashboard";
+  const subRouteKey = routeParts[3];
+  const title = (subRouteKey && titles[subRouteKey]) || titles[routeKey] || activeModule.label;
 
   const visibleModules = useMemo(
     () => modules.filter((module) => moduleIsAllowed(employee?.role, module)),
@@ -226,6 +229,8 @@ export function HrmLayout() {
       ...pageCommands,
       { label: "Create Employee", description: "Start a new employee profile", to: "/hrm/employees", feature: "employees", group: "Create" },
       { label: "Create Job Posting", description: "Open recruitment jobs", to: "/hrm/jobs", feature: "recruitment", group: "Create" },
+      { label: "Create Shift", description: "Configure organization shifts", to: "/hrm/attendance/shifts", feature: "attendance", group: "Create" },
+      { label: "Attendance Policy", description: "Configure attendance rules", to: "/hrm/attendance/policy", feature: "attendance", group: "Create" },
       { label: "Submit Leave", description: "Open leave workflow", to: "/hrm/leave", feature: "leave", group: "Workflow" },
       { label: "Generate Payroll", description: "Open payroll processing", to: "/hrm/payroll", feature: "payroll", group: "Workflow" },
       { label: "Search Reports", description: "Open reports", to: "/hrm/reports", feature: "reports", group: "Workflow" },

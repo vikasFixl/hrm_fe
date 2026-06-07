@@ -11,6 +11,8 @@ import { Field, Input, Select } from "../../components/ui/field";
 import { Modal } from "../../components/ui/modal";
 import { DataTable } from "../../components/ui/table";
 import { useToast } from "../../components/ui/toast";
+import { useAuth } from "../auth/auth-context";
+import { canWriteFeature } from "../auth/role-access";
 
 type AttendanceAdminMode = "shifts" | "policy";
 
@@ -45,9 +47,13 @@ export function AttendanceAdminPage({ mode }: { mode: AttendanceAdminMode }) {
 
 function ShiftMasterPage() {
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingShift, setEditingShift] = useState<any>(null);
   const [form, setForm] = useState(defaultShift);
   const queryClient = useQueryClient();
   const { notify } = useToast();
+  const { employee } = useAuth();
+  const canWrite = canWriteFeature(employee?.role, "attendance");
 
   const shifts = useQuery({
     queryKey: ["attendance", "shifts", "admin"],
@@ -61,6 +67,17 @@ function ShiftMasterPage() {
       setOpen(false);
       setForm(defaultShift);
       notify("Shift created", "success");
+    },
+    onError: (error) => notify(getErrorMessage(error), "error")
+  });
+
+  const updateShift = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: any }) => attendanceShiftApi.update(id, payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["attendance", "shifts"] });
+      setEditOpen(false);
+      setEditingShift(null);
+      notify("Shift updated", "success");
     },
     onError: (error) => notify(getErrorMessage(error), "error")
   });
@@ -106,7 +123,7 @@ function ShiftMasterPage() {
           <h1>Shift Master</h1>
           <p>Create and maintain organization shifts used during onboarding and attendance derivation.</p>
         </div>
-        <Button icon={<Plus size={16} />} onClick={() => setOpen(true)}>Create Shift</Button>
+        {canWrite && <Button icon={<Plus size={16} />} onClick={() => setOpen(true)}>Create Shift</Button>}
       </div>
 
       <section className="kpi-grid">
@@ -126,14 +143,48 @@ function ShiftMasterPage() {
               <td>Grace {shift.graceInMinutes || 0}/{shift.graceOutMinutes || 0} min<br /><span className="muted">Half day after {shift.halfDayAfterMinutes} min</span></td>
               <td><Badge tone={shift.isActive ? "green" : "red"} dot>{shift.isActive ? "Active" : "Inactive"}</Badge></td>
               <td>
-                <Button size="sm" variant="secondary" onClick={() => disableShift.mutate(shift._id)} disabled={disableShift.isPending}>
-                  Disable
-                </Button>
+                {canWrite && (
+                  <div className="toolbar" style={{ gap: 8 }}>
+                    <Button size="sm" variant="secondary" onClick={() => { setEditingShift(shift); setEditOpen(true); }}>Edit</Button>
+                    <Button size="sm" variant="secondary" onClick={() => disableShift.mutate(shift._id)} disabled={disableShift.isPending}>Disable</Button>
+                  </div>
+                )}
               </td>
             </tr>
           ))}
         </DataTable>
       </Card>
+
+      <Modal title="Edit Shift Rules" open={editOpen} onClose={() => setEditOpen(false)}>
+        {editingShift && (
+          <form className="form-grid" onSubmit={(event) => {
+            event.preventDefault();
+            updateShift.mutate({
+              id: editingShift._id,
+              payload: {
+                graceInMinutes: Number(editingShift.graceInMinutes),
+                graceOutMinutes: Number(editingShift.graceOutMinutes),
+                isActive: editingShift.isActive !== false
+              }
+            });
+          }}>
+            <div className="form-grid two">
+              <Field label="Grace in minutes"><Input type="number" min="0" value={editingShift.graceInMinutes ?? 0} onChange={(e) => setEditingShift({ ...editingShift, graceInMinutes: e.target.value })} /></Field>
+              <Field label="Grace out minutes"><Input type="number" min="0" value={editingShift.graceOutMinutes ?? 0} onChange={(e) => setEditingShift({ ...editingShift, graceOutMinutes: e.target.value })} /></Field>
+            </div>
+            <Field label="Active">
+              <Select value={editingShift.isActive === false ? "no" : "yes"} onChange={(e) => setEditingShift({ ...editingShift, isActive: e.target.value === "yes" })}>
+                <option value="yes">Active</option>
+                <option value="no">Inactive</option>
+              </Select>
+            </Field>
+            <div className="form-actions">
+              <Button type="button" variant="secondary" onClick={() => setEditOpen(false)}>Cancel</Button>
+              <Button type="submit" loading={updateShift.isPending}>Save Changes</Button>
+            </div>
+          </form>
+        )}
+      </Modal>
 
       <Modal title="Create Shift" open={open} onClose={() => setOpen(false)}>
         <form className="form-grid" onSubmit={submit}>
@@ -179,6 +230,8 @@ function AttendancePolicyPage() {
   const [form, setForm] = useState(defaultPolicy);
   const queryClient = useQueryClient();
   const { notify } = useToast();
+  const { employee } = useAuth();
+  const canWrite = canWriteFeature(employee?.role, "attendance");
 
   const policy = useQuery({
     queryKey: ["attendance", "policy", "active"],
@@ -251,6 +304,7 @@ function AttendancePolicyPage() {
         <CardHeader><h2>{active ? "Replace Active Policy" : "Create Active Policy"}</h2></CardHeader>
         <CardBody>
           <form className="form-grid" onSubmit={submit}>
+            <fieldset disabled={!canWrite} style={{ border: 0, padding: 0, margin: 0 }}>
             <div className="form-grid three">
               <Field label="Late allowed minutes"><Input type="number" min="0" value={form.lateAllowedMinutes} onChange={(event) => update("lateAllowedMinutes", event.target.value)} /></Field>
               <Field label="Half day threshold" required><Input type="number" min="0" value={form.halfDayThresholdMinutes} onChange={(event) => update("halfDayThresholdMinutes", event.target.value)} required /></Field>
@@ -287,8 +341,13 @@ function AttendancePolicyPage() {
                 <option value="no">Blocked</option>
               </Select>
             </Field>
+            </fieldset>
             <div className="form-actions">
-              <Button type="submit" loading={savePolicy.isPending}>Save Active Policy</Button>
+              {canWrite ? (
+                <Button type="submit" loading={savePolicy.isPending}>Save Active Policy</Button>
+              ) : (
+                <p className="muted">You have read-only access to attendance policy.</p>
+              )}
             </div>
           </form>
         </CardBody>
