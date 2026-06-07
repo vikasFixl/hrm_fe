@@ -244,7 +244,7 @@ export type LoginResponse =
   | { loginType: "DIRECT"; employee: HrmEmployeeSession }
   | { loginType: "MULTI_ORG"; tempToken: string; organizations: HrmEmployeeSession[] }
   | { loginType: "MFA_REQUIRED"; mfaToken: string; message: string }
-  | { loginType: "ONBOARDING_PENDING"; onboardingStatus: string; redirectTo: string };
+  | { loginType: "ONBOARDING_PENDING"; onboardingRequired: boolean; onboardingStatus: string; onboardingToken?: string | null; redirectTo: string };
 
 // --- PERFORMANCE MANAGEMENT TYPES ---
 export type PerformanceAppraisal = {
@@ -449,5 +449,4 @@ export type TravelPolicy = {
   internationalApprovalRequired: boolean;
   active: boolean;
 };
-
 

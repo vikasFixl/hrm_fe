@@ -1538,6 +1538,116 @@ h3 {
   color: var(--text-secondary);
 }
 
+.onboarding-page {
+  place-items: start center;
+}
+
+.onboarding-auth-card {
+  width: min(100%, 1040px);
+}
+
+.onboarding-status-header,
+.onboarding-section-title,
+.onboarding-progress-copy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.onboarding-status-header {
+  margin-bottom: 14px;
+}
+
+.onboarding-progress {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-subtle);
+}
+
+.onboarding-progress-copy span {
+  color: var(--text-secondary);
+}
+
+.onboarding-workflow-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.onboarding-section {
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.46);
+}
+
+.onboarding-section-title {
+  padding-bottom: 4px;
+}
+
+.onboarding-document-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.8fr) minmax(170px, 1fr) minmax(190px, 1.2fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.onboarding-document-row > div {
+  display: grid;
+  gap: 2px;
+}
+
+.onboarding-document-row span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.onboarding-submit-actions {
+  margin-top: 20px;
+}
+
+.lifecycle-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.detail-grid div {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.detail-grid dt {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.detail-grid dd {
+  margin-top: 4px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
 /* Compatibility utilities used by a few generated feature pages */
 .space-y-6 > * + * {
   margin-top: 1.5rem;
@@ -2554,6 +2664,15 @@ button.topbar-search {
   .detail-grid,
   .form-grid.two,
   .form-grid.three {
+    grid-template-columns: 1fr;
+  }
+
+  .onboarding-document-row {
+    grid-template-columns: 1fr;
+  }
+
+  .lifecycle-detail-grid,
+  .detail-grid {
     grid-template-columns: 1fr;
   }
 

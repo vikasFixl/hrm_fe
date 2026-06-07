@@ -77,7 +77,7 @@ type TopbarMenu = "org" | "quick" | "messages" | "notifications" | "theme" | "pr
 
 const modules: ModuleNavItem[] = [
   { key: "dashboard", label: "Dashboard", to: "/hrm/dashboard", icon: LayoutDashboard, features: ["dashboard"], paths: ["/hrm/dashboard"] },
-  { key: "people", label: "People", to: "/hrm/employees", icon: Users, features: ["employees", "organization"], paths: ["/hrm/employees", "/hrm/departments", "/hrm/positions"] },
+  { key: "people", label: "People", to: "/hrm/employees", icon: Users, features: ["employees", "organization"], paths: ["/hrm/employees", "/hrm/lifecycle", "/hrm/departments", "/hrm/positions"] },
   { key: "attendance", label: "Attendance", to: "/hrm/attendance", icon: CalendarCheck, features: ["attendance"], paths: ["/hrm/attendance"] },
   { key: "leave", label: "Leave", to: "/hrm/leave", icon: ClipboardList, features: ["leave"], paths: ["/hrm/leave"] },
   { key: "payroll", label: "Payroll", to: "/hrm/payroll", icon: CreditCard, features: ["payroll"], paths: ["/hrm/payroll"] },
@@ -95,6 +95,7 @@ const modules: ModuleNavItem[] = [
 const secondaryNav: Partial<Record<ModuleKey, SubNavItem[]>> = {
   people: [
     { label: "Employees", to: "/hrm/employees", feature: "employees" },
+    { label: "Onboarding & Offboarding", to: "/hrm/lifecycle", feature: "employees" },
     { label: "Departments", to: "/hrm/departments", feature: "organization" },
     { label: "Positions", to: "/hrm/positions", feature: "organization" },
     { label: "Assets", to: "/hrm/assets", feature: "assets" },
@@ -123,6 +124,7 @@ const secondaryNav: Partial<Record<ModuleKey, SubNavItem[]>> = {
 const titles: Record<string, string> = {
   dashboard: "Dashboard",
   employees: "People",
+  lifecycle: "People",
   departments: "People",
   positions: "People",
   leave: "Leave",

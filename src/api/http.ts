@@ -1,6 +1,6 @@
 import axios, { AxiosError } from "axios";
 
-const apiBaseUrl = import.meta.env.VITE_HRM_API_BASE_URL || "http://localhost:5001/api/hrm";
+export const apiBaseUrl = import.meta.env.VITE_HRM_API_BASE_URL || "http://localhost:5001/api/hrm";
 
 export const http = axios.create({
   baseURL: apiBaseUrl,

@@ -7,6 +7,8 @@ import { OnboardingPendingPage } from "./features/auth/onboarding-pending-page";
 import { DashboardPage } from "./features/dashboard/dashboard-page";
 import { EmployeesPage } from "./features/employees/employees-page";
 import { EmployeeDetailPage } from "./features/employees/employee-detail-page";
+import { LifecyclePage } from "./features/employees/lifecycle-page";
+import { OffboardingDetailPage, OnboardingReviewDetailPage } from "./features/employees/lifecycle-detail-page";
 import { DepartmentsPage } from "./features/org/departments-page";
 import { PositionsPage } from "./features/org/positions-page";
 import { LeavePage } from "./features/leave/leave-page";
@@ -36,6 +38,13 @@ export function App() {
       <Route path="/hrm/login" element={<LoginPage />} />
       <Route path="/hrm/select-org" element={<SelectOrgPage />} />
       <Route path="/hrm/onboarding/start" element={<OnboardingPendingPage />} />
+      <Route path="/hrm/onboarding/initiated" element={<OnboardingPendingPage />} />
+      <Route path="/hrm/onboarding/pending" element={<OnboardingPendingPage />} />
+      <Route path="/hrm/onboarding/submitted" element={<OnboardingPendingPage />} />
+      <Route path="/hrm/onboarding/under-review" element={<OnboardingPendingPage />} />
+      <Route path="/hrm/onboarding/in-progress" element={<OnboardingPendingPage />} />
+      <Route path="/hrm/onboarding/rejected" element={<OnboardingPendingPage />} />
+      <Route path="/hrm/onboarding/cancelled" element={<OnboardingPendingPage />} />
       <Route element={<ProtectedRoute />}>
         <Route element={<HrmLayout />}>
           <Route element={<ProtectedRoute feature="dashboard" />}>
@@ -44,6 +53,9 @@ export function App() {
           <Route element={<ProtectedRoute feature="employees" />}>
             <Route path="/hrm/employees" element={<EmployeesPage />} />
             <Route path="/hrm/employees/:id" element={<EmployeeDetailPage />} />
+            <Route path="/hrm/lifecycle" element={<LifecyclePage />} />
+            <Route path="/hrm/lifecycle/onboarding/:id" element={<OnboardingReviewDetailPage />} />
+            <Route path="/hrm/lifecycle/offboarding/:id" element={<OffboardingDetailPage />} />
           </Route>
           <Route element={<ProtectedRoute feature="organization" />}>
             <Route path="/hrm/departments" element={<DepartmentsPage />} />

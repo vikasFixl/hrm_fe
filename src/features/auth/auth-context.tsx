@@ -8,6 +8,7 @@ import { useToast } from "../../components/ui/toast";
 type PendingAuth =
   | { type: "MFA"; mfaToken: string }
   | { type: "MULTI_ORG"; tempToken: string; organizations: HrmEmployeeSession[] }
+  | { type: "ONBOARDING"; onboardingStatus: string; onboardingToken: string | null; redirectTo: string }
   | null;
 
 type AuthContextValue = {
@@ -22,6 +23,7 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 const storageKey = "erp_hrm_employee";
+const onboardingStorageKey = "erp_hrm_onboarding";
 
 function readStoredEmployee() {
   const raw = window.localStorage.getItem(storageKey);
@@ -44,6 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     (session: HrmEmployeeSession) => {
       setEmployee(session);
       window.localStorage.setItem(storageKey, JSON.stringify(session));
+      window.sessionStorage.removeItem(onboardingStorageKey);
       setPendingAuth(null);
       navigate("/hrm/dashboard", { replace: true });
     },
@@ -70,6 +73,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         navigate("/hrm/select-org", { replace: true });
         return;
       }
+      window.localStorage.removeItem(storageKey);
+      setEmployee(null);
+      const onboardingAuth = {
+        type: "ONBOARDING" as const,
+        onboardingStatus: response.onboardingStatus,
+        onboardingToken: response.onboardingToken || null,
+        redirectTo: response.redirectTo || "/hrm/onboarding/start"
+      };
+      setPendingAuth(onboardingAuth);
+      window.sessionStorage.setItem(onboardingStorageKey, JSON.stringify(onboardingAuth));
       navigate(response.redirectTo || "/hrm/onboarding/start", { replace: true });
     },
     [completeLogin, navigate]
@@ -119,16 +132,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setEmployee(null);
     setPendingAuth(null);
     window.localStorage.removeItem(storageKey);
+    window.sessionStorage.removeItem(onboardingStorageKey);
     navigate("/hrm/login", { replace: true });
   }, [navigate]);
 
   useEffect(() => {
+    const storedOnboarding = window.sessionStorage.getItem(onboardingStorageKey);
+    if (!employee && storedOnboarding && !pendingAuth) {
+      try {
+        setPendingAuth(JSON.parse(storedOnboarding));
+      } catch {
+        window.sessionStorage.removeItem(onboardingStorageKey);
+      }
+    }
     const handleForceLogout = () => {
       logout();
     };
     window.addEventListener("auth-logout", handleForceLogout);
     return () => window.removeEventListener("auth-logout", handleForceLogout);
-  }, [logout]);
+  }, [employee, logout, pendingAuth]);
 
   const value = useMemo(
     () => ({

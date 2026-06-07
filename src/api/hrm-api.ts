@@ -1,4 +1,5 @@
-import { http, unwrap, unwrapList } from "./http";
+import axios from "axios";
+import { apiBaseUrl, http, unwrap, unwrapList } from "./http";
 import {
   DailyAttendance,
   Department,
@@ -39,6 +40,93 @@ export const authApi = {
     return data;
   },
   logout: async () => http.post("/auth/logout")
+};
+
+const onboardingHttp = axios.create({
+  baseURL: apiBaseUrl.replace(/\/api\/hrm\/?$/, "/api/onboarding"),
+  withCredentials: true
+});
+
+const hrOnboardingReviewHttp = axios.create({
+  baseURL: apiBaseUrl.replace(/\/api\/hrm\/?$/, "/api/hr/onboarding"),
+  withCredentials: true,
+  headers: { "Content-Type": "application/json" }
+});
+
+const onboardingHeaders = (token: string) => ({ Authorization: `Bearer ${token}` });
+
+export const employeeOnboardingApi = {
+  me: async (token: string) => {
+    const { data } = await onboardingHttp.get("/me", { headers: onboardingHeaders(token) });
+    return data.data as {
+      status: string;
+      currentStep: string;
+      completionPercentage: number;
+      requiredDocuments: string[];
+      submittedDocuments: any[];
+    };
+  },
+  submission: async (token: string) => {
+    const { data } = await onboardingHttp.get("/me/submission", { headers: onboardingHeaders(token) });
+    return data.data as any;
+  },
+  savePersonalInfo: async (token: string, payload: any) => {
+    const { data } = await onboardingHttp.patch("/me/personal-info", payload, { headers: onboardingHeaders(token) });
+    return data.data;
+  },
+  saveEmergencyContact: async (token: string, payload: any) => {
+    const { data } = await onboardingHttp.patch("/me/emergency-contact", payload, { headers: onboardingHeaders(token) });
+    return data.data;
+  },
+  saveBankDetails: async (token: string, payload: any) => {
+    const { data } = await onboardingHttp.patch("/me/bank-details", payload, { headers: onboardingHeaders(token) });
+    return data.data;
+  },
+  uploadDocument: async (token: string, payload: { type: string; number?: string; file: File }) => {
+    const formData = new FormData();
+    formData.append("type", payload.type);
+    if (payload.number) formData.append("number", payload.number);
+    formData.append("document", payload.file);
+    const { data } = await onboardingHttp.post("/me/documents", formData, {
+      headers: { ...onboardingHeaders(token), "Content-Type": "multipart/form-data" }
+    });
+    return data.data;
+  },
+  deleteDocument: async (token: string, documentType: string) => {
+    const { data } = await onboardingHttp.delete(`/me/documents/${documentType}`, { headers: onboardingHeaders(token) });
+    return data;
+  },
+  submit: async (token: string) => {
+    const { data } = await onboardingHttp.post("/me/submit", null, { headers: onboardingHeaders(token) });
+    return data.data;
+  }
+};
+
+export const hrOnboardingReviewApi = {
+  list: async (params?: Record<string, any>) => {
+    const { data } = await hrOnboardingReviewHttp.get("/", { params });
+    return data as { data: any[]; pagination?: any };
+  },
+  get: async (id: string) => {
+    const { data } = await hrOnboardingReviewHttp.get(`/${id}`);
+    return data.data as { onboarding: any; submission?: any };
+  },
+  approveDocument: async (onboardingId: string, documentId: string) => {
+    const { data } = await hrOnboardingReviewHttp.patch(`/${onboardingId}/document/${documentId}/approve`);
+    return data.data;
+  },
+  rejectDocument: async (onboardingId: string, documentId: string, reason: string) => {
+    const { data } = await hrOnboardingReviewHttp.patch(`/${onboardingId}/document/${documentId}/reject`, { reason });
+    return data.data;
+  },
+  approveOnboarding: async (onboardingId: string) => {
+    const { data } = await hrOnboardingReviewHttp.patch(`/${onboardingId}/approve`);
+    return data.data;
+  },
+  rejectOnboarding: async (onboardingId: string, reason: string) => {
+    const { data } = await hrOnboardingReviewHttp.patch(`/${onboardingId}/reject`, { reason });
+    return data.data;
+  }
 };
 
 export const employeeApi = {
@@ -101,6 +189,55 @@ export const employeeApi = {
     const { data } = await http.get(`/employees/hierarchy/${id}`);
     // data.directReports is an array of Employee
     return data as { employee: any; directReports: any[] };
+  }
+};
+
+export const lifecycleApi = {
+  listOnboardings: async (params?: { status?: string; page?: number; limit?: number }) => {
+    const { data } = await http.get("/employees/onboarding/all", { params });
+    return data as {
+      onboardings: any[];
+      pagination: { totalRecords: number; currentPage: number; totalPages: number; limit: number };
+    };
+  },
+  initiateOnboarding: async (employeeId: string) => {
+    const { data } = await http.post(`/employees/onboarding/initiate/${employeeId}`);
+    return data;
+  },
+  updateOnboarding: async (
+    onboardingId: string,
+    payload: { status: string; rejectionReason?: string; shiftId?: string; attendanceStartDate?: string }
+  ) => {
+    const { data } = await http.patch(`/employees/onboarding/status/${onboardingId}`, payload);
+    return data;
+  },
+  deleteOnboarding: async (onboardingId: string) => {
+    const { data } = await http.delete(`/employees/onboarding/${onboardingId}`);
+    return data;
+  },
+  listOffboardings: async (params?: { status?: string; employeeId?: string }) => {
+    const { data } = await http.get("/employees/offboarding", { params });
+    return (data as { offboardings: any[] }).offboardings || [];
+  },
+  getOffboarding: async (id: string) => {
+    const { data } = await http.get("/employees/offboarding");
+    return ((data as { offboardings: any[] }).offboardings || []).find((record) => record._id === id);
+  },
+  initiateOffboarding: async (payload: {
+    employeeId: string;
+    reason?: string;
+    lastWorkingDay: string;
+    checklist?: { task: string; completed: boolean }[];
+  }) => {
+    const { data } = await http.post("/employees/offboarding", payload);
+    return data;
+  },
+  updateOffboarding: async (
+    id: string,
+    payload: { status?: string; checklist?: { task: string; completed: boolean; completedAt?: string }[]; feedback?: string }
+  ) => {
+    const { data } = await http.patch(`/employees/offboarding/${id}`, payload);
+    return data;
   }
 };
 
