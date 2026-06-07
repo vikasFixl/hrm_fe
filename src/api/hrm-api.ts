@@ -102,6 +102,36 @@ export const employeeOnboardingApi = {
   }
 };
 
+export const attendanceShiftApi = {
+  list: async (params?: { search?: string }) => {
+    const { data } = await http.get("/attendance/shifts/list", { params });
+    return unwrapList<any>(data, ["data"]);
+  },
+  create: async (payload: any) => {
+    const { data } = await http.post("/attendance/shifts", payload);
+    return unwrap<any>(data);
+  },
+  update: async (id: string, payload: any) => {
+    const { data } = await http.patch(`/attendance/shifts/${id}`, payload);
+    return unwrap<any>(data);
+  },
+  disable: async (id: string) => {
+    const { data } = await http.delete(`/attendance/shifts/${id}`);
+    return data;
+  }
+};
+
+export const attendancePolicyApi = {
+  active: async () => {
+    const { data } = await http.get("/attendance/policy/active");
+    return unwrap<any>(data);
+  },
+  upsert: async (payload: any) => {
+    const { data } = await http.post("/attendance/policy", payload);
+    return unwrap<any>(data);
+  }
+};
+
 export const hrOnboardingReviewApi = {
   list: async (params?: Record<string, any>) => {
     const { data } = await hrOnboardingReviewHttp.get("/", { params });
@@ -119,8 +149,8 @@ export const hrOnboardingReviewApi = {
     const { data } = await hrOnboardingReviewHttp.patch(`/${onboardingId}/document/${documentId}/reject`, { reason });
     return data.data;
   },
-  approveOnboarding: async (onboardingId: string) => {
-    const { data } = await hrOnboardingReviewHttp.patch(`/${onboardingId}/approve`);
+  approveOnboarding: async (onboardingId: string, payload?: { shiftId?: string; attendanceStartDate?: string }) => {
+    const { data } = await hrOnboardingReviewHttp.patch(`/${onboardingId}/approve`, payload || {});
     return data.data;
   },
   rejectOnboarding: async (onboardingId: string, reason: string) => {
@@ -422,7 +452,8 @@ export const expenseApi = {
   submitExpense: async (payload: any) => { const { data } = await http.post("/expenses/submissions", payload); return data; },
   updateExpense: async (id: string, payload: any) => { const { data } = await http.put(`/expenses/submissions/${id}`, payload); return data; },
   getWorkflows: async () => { const { data } = await http.get("/expenses/workflows"); return unwrapList<any>(data, ["workflows"]); },
-  getReimbursements: async () => { const { data } = await http.get("/expenses/reimbursements"); return unwrapList<any>(data, ["reimbursements"]); }
+  getReimbursements: async () => { const { data } = await http.get("/expenses/reimbursements"); return unwrapList<any>(data, ["reimbursements"]); },
+  createReimbursement: async (payload: any) => { const { data } = await http.post("/expenses/reimbursements", payload); return data; }
 };
 
 export const assetApi = {

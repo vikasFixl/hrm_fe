@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, CircleUserRound, ClipboardCheck, Eye, Play, RefreshCw, UserMinus, UserPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { employeeApi, lifecycleApi } from "../../api/hrm-api";
+import { attendanceShiftApi, employeeApi, lifecycleApi } from "../../api/hrm-api";
 import { getErrorMessage } from "../../api/http";
 import { Avatar } from "../../components/ui/avatar";
 import { Badge } from "../../components/ui/badge";
@@ -67,6 +67,7 @@ export function LifecyclePage() {
     queryFn: () => lifecycleApi.listOffboardings({ status: offboardingFilter || undefined })
   });
   const employees = useQuery({ queryKey: ["employees"], queryFn: employeeApi.list });
+  const shifts = useQuery({ queryKey: ["attendance", "shifts", "list"], queryFn: () => attendanceShiftApi.list() });
 
   const onboardingRows = onboardings.data?.onboardings || [];
   const offboardingRows = offboardings.data || [];
@@ -257,7 +258,16 @@ export function LifecyclePage() {
           )}
           {selected?.lifecycleType === "onboarding" && nextStatus === "Completed" && (
             <div className="form-grid two">
-              <Field label="Shift ID" required><Input value={shiftId} onChange={(event) => setShiftId(event.target.value)} required /></Field>
+              <Field label="Shift" required>
+                <Select value={shiftId} onChange={(event) => setShiftId(event.target.value)} required>
+                  <option value="">Select shift</option>
+                  {shifts.data?.map((shift: any) => (
+                    <option key={shift._id} value={shift._id}>
+                      {shift.shiftType} ({shift.startTime} - {shift.endTime})
+                    </option>
+                  ))}
+                </Select>
+              </Field>
               <Field label="Attendance start date" required><Input type="date" value={attendanceStartDate} onChange={(event) => setAttendanceStartDate(event.target.value)} required /></Field>
             </div>
           )}

@@ -107,6 +107,11 @@ const secondaryNav: Partial<Record<ModuleKey, SubNavItem[]>> = {
     { label: "Offers", to: "/hrm/offers", feature: "recruitment" },
     { label: "Analytics", to: "/hrm/recruitment-analytics", feature: "recruitment" },
   ],
+  attendance: [
+    { label: "Daily Attendance", to: "/hrm/attendance", feature: "attendance" },
+    { label: "Shift Master", to: "/hrm/attendance/shifts", feature: "attendance" },
+    { label: "Attendance Policy", to: "/hrm/attendance/policy", feature: "attendance" },
+  ],
   performance: [
     { label: "Goals & Reviews", to: "/hrm/performance", feature: "performance" },
     { label: "Surveys", to: "/hrm/surveys", feature: "surveys" },
@@ -129,6 +134,8 @@ const titles: Record<string, string> = {
   positions: "People",
   leave: "Leave",
   attendance: "Attendance",
+  "shifts": "Attendance",
+  "policy": "Attendance",
   jobs: "Recruitment",
   candidates: "Recruitment",
   interviews: "Recruitment",
@@ -152,6 +159,7 @@ const pinnedRoutes = [
   "/hrm/dashboard",
   "/hrm/employees",
   "/hrm/attendance",
+  "/hrm/attendance/shifts",
   "/hrm/payroll",
   "/hrm/reports",
 ];

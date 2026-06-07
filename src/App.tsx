@@ -13,6 +13,7 @@ import { DepartmentsPage } from "./features/org/departments-page";
 import { PositionsPage } from "./features/org/positions-page";
 import { LeavePage } from "./features/leave/leave-page";
 import { AttendancePage } from "./features/attendance/attendance-page";
+import { AttendanceAdminPage } from "./features/attendance/attendance-admin-page";
 import { SettingsPage } from "./features/settings/settings-page";
 import { JobPostingsPage } from "./features/recruitment/job-postings-page";
 import { CandidateTrackingPage } from "./features/recruitment/candidate-tracking-page";
@@ -66,6 +67,8 @@ export function App() {
           </Route>
           <Route element={<ProtectedRoute feature="attendance" />}>
             <Route path="/hrm/attendance" element={<AttendancePage />} />
+            <Route path="/hrm/attendance/shifts" element={<AttendanceAdminPage mode="shifts" />} />
+            <Route path="/hrm/attendance/policy" element={<AttendanceAdminPage mode="policy" />} />
           </Route>
           <Route element={<ProtectedRoute feature="recruitment" />}>
             <Route path="/hrm/jobs" element={<JobPostingsPage />} />

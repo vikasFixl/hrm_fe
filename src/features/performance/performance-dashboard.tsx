@@ -2,10 +2,11 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarDays, ClipboardCheck, MessageSquare, Plus, Target, TrendingUp } from "lucide-react";
-import { performanceApi } from "../../api/hrm-api";
+import { employeeApi, performanceApi } from "../../api/hrm-api";
 import { Button } from "../../components/ui/button";
 import { Card } from "../../components/ui/card";
 import { EmptyState } from "../../components/ui/empty-state";
+import { AsyncSelect } from "../../components/ui/async-select";
 import { SkeletonCard, SkeletonList, SkeletonTable } from "../../components/ui/skeleton";
 import { Tabs } from "../../components/ui/tabs";
 
@@ -158,7 +159,7 @@ function CreateGoalModal({ label = "Create Goal" }: { label?: string }) {
             <div className="form-grid">
               <label className="field">
                 <span>Employee</span>
-                <input className="input" placeholder="Employee ID or email" value={employeeId} onChange={(event) => setEmployeeId(event.target.value)} />
+                <AsyncSelect value={employeeId} onChange={setEmployeeId} fetchOptions={employeeApi.searchEmployeesByEmail} placeholder="Search employee by email..." />
               </label>
               <label className="field">
                 <span>Goal Title</span>

@@ -3,12 +3,12 @@ import { FormEvent, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Check, ExternalLink, FileCheck2, FileSearch, ShieldCheck, X } from "lucide-react";
-import { hrOnboardingReviewApi, lifecycleApi } from "../../api/hrm-api";
+import { attendanceShiftApi, hrOnboardingReviewApi, lifecycleApi } from "../../api/hrm-api";
 import { getErrorMessage } from "../../api/http";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Card, CardBody, CardHeader, KpiCard } from "../../components/ui/card";
-import { Field, Select, Textarea } from "../../components/ui/field";
+import { Field, Input, Select, Textarea } from "../../components/ui/field";
 import { Modal } from "../../components/ui/modal";
 import { DataTable } from "../../components/ui/table";
 import { useToast } from "../../components/ui/toast";
@@ -33,13 +33,17 @@ export function OnboardingReviewDetailPage() {
   const { notify } = useToast();
   const [rejectDoc, setRejectDoc] = useState<any>(null);
   const [rejectAllOpen, setRejectAllOpen] = useState(false);
+  const [approveOpen, setApproveOpen] = useState(false);
   const [reason, setReason] = useState("");
+  const [shiftId, setShiftId] = useState("");
+  const [attendanceStartDate, setAttendanceStartDate] = useState(new Date().toISOString().slice(0, 10));
 
   const review = useQuery({
     queryKey: ["hr-onboarding-review", id],
     queryFn: () => hrOnboardingReviewApi.get(id),
     enabled: Boolean(id)
   });
+  const shifts = useQuery({ queryKey: ["attendance", "shifts", "list"], queryFn: () => attendanceShiftApi.list() });
 
   const onboarding = review.data?.onboarding;
   const submission = review.data?.submission;
@@ -78,8 +82,13 @@ export function OnboardingReviewDetailPage() {
   });
 
   const approveOnboarding = useMutation({
-    mutationFn: () => hrOnboardingReviewApi.approveOnboarding(id),
-    onSuccess: async () => { await invalidate(); notify("Onboarding approved", "success"); },
+    mutationFn: () => hrOnboardingReviewApi.approveOnboarding(id, { shiftId, attendanceStartDate }),
+    onSuccess: async () => {
+      await invalidate();
+      setApproveOpen(false);
+      setShiftId("");
+      notify("Onboarding approved", "success");
+    },
     onError: (error) => notify(getErrorMessage(error), "error")
   });
 
@@ -103,6 +112,11 @@ export function OnboardingReviewDetailPage() {
   function submitOnboardingRejection(event: FormEvent) {
     event.preventDefault();
     rejectOnboarding.mutate(reason);
+  }
+
+  function submitOnboardingApproval(event: FormEvent) {
+    event.preventDefault();
+    approveOnboarding.mutate();
   }
 
   if (review.isLoading) {
@@ -134,7 +148,7 @@ export function OnboardingReviewDetailPage() {
         <div className="toolbar">
           <Badge tone={statusTone(onboarding.status)} dot>{onboarding.status}</Badge>
           <Button variant="secondary" icon={<X size={16} />} onClick={() => setRejectAllOpen(true)} disabled={onboarding.status === "Completed"}>Reject</Button>
-          <Button icon={<ShieldCheck size={16} />} loading={approveOnboarding.isPending} onClick={() => approveOnboarding.mutate()} disabled={onboarding.status === "Completed"}>Approve Onboarding</Button>
+          <Button icon={<ShieldCheck size={16} />} loading={approveOnboarding.isPending} onClick={() => setApproveOpen(true)} disabled={onboarding.status === "Completed"}>Approve Onboarding</Button>
         </div>
       </div>
 
@@ -211,6 +225,28 @@ export function OnboardingReviewDetailPage() {
           <div className="form-actions">
             <Button type="button" variant="secondary" onClick={() => setRejectAllOpen(false)}>Cancel</Button>
             <Button type="submit" variant="danger" loading={rejectOnboarding.isPending}>Reject Onboarding</Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal title="Approve Onboarding" open={approveOpen} onClose={() => setApproveOpen(false)}>
+        <form className="form-grid" onSubmit={submitOnboardingApproval}>
+          <Field label="Shift" required>
+            <Select value={shiftId} onChange={(event) => setShiftId(event.target.value)} required>
+              <option value="">Select shift</option>
+              {shifts.data?.map((shift: any) => (
+                <option key={shift._id} value={shift._id}>
+                  {shift.shiftType} ({shift.startTime} - {shift.endTime})
+                </option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Attendance start date" required>
+            <Input type="date" value={attendanceStartDate} onChange={(event) => setAttendanceStartDate(event.target.value)} required />
+          </Field>
+          <div className="form-actions">
+            <Button type="button" variant="secondary" onClick={() => setApproveOpen(false)}>Cancel</Button>
+            <Button type="submit" loading={approveOnboarding.isPending}>Approve Onboarding</Button>
           </div>
         </form>
       </Modal>

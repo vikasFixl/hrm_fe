@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarCheck, Clock, Edit, Lock, Unlock } from "lucide-react";
-import { attendanceApi } from "../../api/hrm-api";
+import { attendanceApi, employeeApi } from "../../api/hrm-api";
 import { DailyAttendance } from "../../api/types";
 import { getErrorMessage } from "../../api/http";
 import { Badge } from "../../components/ui/badge";
@@ -13,6 +13,7 @@ import { Field, Input, Select } from "../../components/ui/field";
 import { Modal } from "../../components/ui/modal";
 import { DataTable } from "../../components/ui/table";
 import { Tabs } from "../../components/ui/tabs";
+import { AsyncSelect } from "../../components/ui/async-select";
 import { useToast } from "../../components/ui/toast";
 import { useAuth } from "../auth/auth-context";
 import { canWriteFeature } from "../auth/role-access";
@@ -120,8 +121,8 @@ export function AttendancePage() {
       {tab === "employee" && (
         <Card className="card-padded">
           <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
-            <Field label="Employee ID">
-              <Input value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} placeholder="Employee profile ID" />
+            <Field label="Employee">
+              <AsyncSelect value={employeeId} onChange={setEmployeeId} fetchOptions={employeeApi.searchEmployeesByEmail} placeholder="Search employee by email..." />
             </Field>
             {canManageAttendance && <Button variant="secondary" size="sm" icon={<Lock size={14} />} onClick={() => employeeId && lockEmployee.mutate({ employeeId, ...monthRange })}>Lock</Button>}
             {canManageAttendance && <Button variant="secondary" size="sm" icon={<Unlock size={14} />} onClick={() => employeeId && unlockEmployee.mutate({ employeeId, ...monthRange, reason: "Manual unlock from HRM UI" })}>Unlock</Button>}
